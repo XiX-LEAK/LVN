@@ -1,0 +1,26 @@
+{
+  "name": "lvn-firebase",
+  "version": "1.0.0",
+  "description": "LVN Coiffeur - Interface d'administration avec Firebase",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "http-server -p 8080 -c-1",
+    "dev": "http-server -p 8080 -c-1 -o",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "firebase",
+    "coiffeur",
+    "admin",
+    "rdv"
+  ],
+  "author": "LVN",
+  "license": "ISC",
+  "dependencies": {
+    "firebase": "^12.2.1"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}

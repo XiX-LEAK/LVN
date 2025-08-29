@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LVN Coiffeur - Admin Firebase</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256' viewBox='0 0 256 256'%3E%3Crect width='256' height='256' fill='%23ffffff'/%3E%3Ctext x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' font-family='Inter, Arial, sans-serif' font-size='140' fill='%23000000' font-weight='700'%3ELVN%3C/text%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+    <!-- Écran de connexion -->
+    <div class="container" id="loginContainer">
+        <div class="login-card">
+            <h1 class="title">LVN</h1>
+            <p class="subtitle">ESPACE ADMINISTRATION FIREBASE</p>
+            
+            <!-- Formulaire de connexion -->
+            <div class="password-form show">
+                <input type="password" 
+                       class="password-input" 
+                       id="passwordInput" 
+                       placeholder="Mot de passe d'administration"
+                       autocomplete="current-password">
+                
+                <button class="login-btn" id="loginBtn" onclick="handleLogin()">
+                    <span id="loginBtnText">Se connecter</span>
+                </button>
+                
+                <div class="error-message" id="errorMessage"></div>
+                
+                <div class="loading" id="loadingDiv">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel d'administration -->
+    <div class="admin-panel" id="adminPanel">
+        <div class="admin-container">
+            <!-- Navigation -->
+            <div class="top-nav">
+                <div class="nav-menu">
+                    <div class="nav-item active" onclick="showPage('appointments')">
+                        <span class="nav-icon">📅</span>
+                        <span class="nav-label">Rendez-vous</span>
+                    </div>
+                    <div class="nav-item" onclick="showPage('services')">
+                        <span class="nav-icon">✂️</span>
+                        <span class="nav-label">Services</span>
+                    </div>
+                    <div class="nav-item" onclick="showPage('stats')">
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-label">Statistiques</span>
+                    </div>
+                </div>
+                
+                <div class="logout-btn-top" onclick="handleLogout()">
+                    <span class="logout-icon">🚪</span>
+                    <span class="logout-text">Déconnexion</span>
+                </div>
+            </div>
+
+            <!-- Contenu principal -->
+            <div class="main-content">
+                <!-- Page Rendez-vous -->
+                <div class="page-content active" id="appointments-page">
+                    <div class="page-header">
+                        <h1 class="page-title">Rendez-vous</h1>
+                        <div class="page-actions">
+                            <div class="date-navigation">
+                                <button class="nav-btn" onclick="previousDay()">‹</button>
+                                <input type="date" class="date-picker" id="datePicker" onchange="loadRdvByDate()">
+                                <button class="nav-btn" onclick="nextDay()">›</button>
+                                <button class="today-btn" onclick="goToToday()">Aujourd'hui</button>
+                            </div>
+                            <button class="add-btn" onclick="openAddRdvModal()">
+                                <span>➕</span>
+                                <span>Nouveau RDV</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Recherche et filtres -->
+                    <div class="search-filters">
+                        <input type="text" 
+                               class="search-input" 
+                               id="searchInput" 
+                               placeholder="Rechercher un RDV par nom de client..." 
+                               oninput="searchRdv(this.value)">
+                        <div class="filters">
+                            <select class="filter-select" id="statusFilter" onchange="filterRdv()">
+                                <option value="">Tous les statuts</option>
+                                <option value="prevu">Prévu</option>
+                                <option value="arrive">Arrivé</option>
+                                <option value="encours">En cours</option>
+                                <option value="termine">Terminé</option>
+                                <option value="annule">Annulé</option>
+                            </select>
+                            <select class="filter-select" id="paymentFilter" onchange="filterRdv()">
+                                <option value="">Tous les paiements</option>
+                                <option value="unpaid">Non payé</option>
+                                <option value="paid">Payé</option>
+                                <option value="comped">Gratuit</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Liste des rendez-vous -->
+                    <div class="rdv-list" id="rdvList">
+                        <!-- Les RDV seront chargés ici -->
+                    </div>
+                </div>
+
+                <!-- Page Services -->
+                <div class="page-content" id="services-page">
+                    <div class="coming-soon">
+                        <h3>Services & Tarifs</h3>
+                        <p>Interface de gestion des services à venir...</p>
+                    </div>
+                </div>
+
+                <!-- Page Statistiques -->
+                <div class="page-content" id="stats-page">
+                    <div class="coming-soon">
+                        <h3>Statistiques</h3>
+                        <p>Tableau de bord des statistiques à venir...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Ajout/Modification RDV -->
+    <div class="modal-overlay" id="rdvModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle">Nouveau Rendez-vous</h3>
+                <button class="modal-close" onclick="closeRdvModal()">✕</button>
+            </div>
+            
+            <form class="modal-form" id="rdvForm" onsubmit="saveRdv(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="rdvDate">Date</label>
+                        <input type="date" id="rdvDate" name="date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="rdvTime">Heure</label>
+                        <input type="time" id="rdvTime" name="time" required>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="clientName">Nom du client</label>
+                        <input type="text" id="clientName" name="clientName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="clientPhone">Téléphone</label>
+                        <input type="tel" id="clientPhone" name="clientPhone">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="service">Service</label>
+                        <select id="service" name="service" required>
+                            <option value="">Choisir un service</option>
+                            <option value="coupe">Coupe</option>
+                            <option value="shampoing">Shampoing</option>
+                            <option value="coloration">Coloration</option>
+                            <option value="brushing">Brushing</option>
+                            <option value="permanente">Permanente</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="price">Prix (€)</label>
+                        <input type="number" id="price" name="price" step="0.01" min="0">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="status">Statut</label>
+                        <select id="status" name="status">
+                            <option value="prevu">Prévu</option>
+                            <option value="arrive">Arrivé</option>
+                            <option value="encours">En cours</option>
+                            <option value="termine">Terminé</option>
+                            <option value="annule">Annulé</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="paymentStatus">Paiement</label>
+                        <select id="paymentStatus" name="paymentStatus">
+                            <option value="unpaid">Non payé</option>
+                            <option value="paid">Payé</option>
+                            <option value="comped">Gratuit</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="notes">Notes</label>
+                    <textarea id="notes" name="notes" rows="3" placeholder="Notes supplémentaires..."></textarea>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn-cancel" onclick="closeRdvModal()">Annuler</button>
+                    <button type="submit" class="btn-save">
+                        <span id="saveBtnText">Enregistrer</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts Firebase -->
+    <script type="module">
+        // Import modules
+        import { simpleAuth } from './simple-auth.js';
+        import { rdvManager } from './firebase-rdv.js';
+
+        // Variables globales
+        let currentEditingId = null;
+        let allRdvs = [];
+        let currentUser = null;
+
+        // Initialisation
+        window.addEventListener('DOMContentLoaded', () => {
+            initApp();
+        });
+
+        async function initApp() {
+            // Vérifier l'état d'authentification
+            if (simpleAuth.isAuthenticated()) {
+                showAdminPanel();
+                await loadAllRdv();
+            } else {
+                showLoginScreen();
+            }
+            
+            // Définir la date d'aujourd'hui
+            document.getElementById('datePicker').value = new Date().toISOString().split('T')[0];
+        }
+
+        // === AUTHENTIFICATION ===
+        window.handleLogin = async function() {
+            const password = document.getElementById('passwordInput').value.trim();
+            const errorDiv = document.getElementById('errorMessage');
+            const loadingDiv = document.getElementById('loadingDiv');
+            const loginBtn = document.getElementById('loginBtn');
+            
+            if (!password) {
+                showError('Veuillez saisir le mot de passe');
+                return;
+            }
+
+            // Afficher le loading
+            loadingDiv.style.display = 'block';
+            loginBtn.disabled = true;
+            errorDiv.classList.remove('show');
+
+            try {
+                const result = await simpleAuth.login(password);
+                
+                if (result.success) {
+                    showAdminPanel();
+                    await loadAllRdv();
+                } else {
+                    showError(result.error);
+                }
+            } catch (error) {
+                showError('Erreur de connexion: ' + error.message);
+            } finally {
+                loadingDiv.style.display = 'none';
+                loginBtn.disabled = false;
+            }
+        };
+
+        window.handleLogout = async function() {
+            try {
+                simpleAuth.logout();
+                showLoginScreen();
+            } catch (error) {
+                console.error('Erreur déconnexion:', error);
+            }
+        };
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.classList.add('show');
+            
+            setTimeout(() => {
+                errorDiv.classList.remove('show');
+            }, 5000);
+        }
+
+        function showLoginScreen() {
+            document.getElementById('loginContainer').style.display = 'flex';
+            document.getElementById('adminPanel').classList.remove('show');
+        }
+
+        function showAdminPanel() {
+            document.getElementById('loginContainer').style.display = 'none';
+            document.getElementById('adminPanel').classList.add('show');
+        }
+
+        // === GESTION DES RENDEZ-VOUS ===
+        async function loadAllRdv() {
+            try {
+                const result = await rdvManager.getAllRendezVous();
+                if (result.success) {
+                    allRdvs = result.data;
+                    displayRdvs(allRdvs);
+                } else {
+                    console.error('Erreur chargement RDV:', result.error);
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+            }
+        }
+
+        window.loadRdvByDate = async function() {
+            const selectedDate = document.getElementById('datePicker').value;
+            if (!selectedDate) return;
+
+            try {
+                const result = await rdvManager.getRendezVousByDate(selectedDate);
+                if (result.success) {
+                    displayRdvs(result.data);
+                }
+            } catch (error) {
+                console.error('Erreur chargement par date:', error);
+            }
+        };
+
+        function displayRdvs(rdvs) {
+            const rdvList = document.getElementById('rdvList');
+            
+            if (!rdvs || rdvs.length === 0) {
+                rdvList.innerHTML = `
+                    <div class="empty-state">
+                        <h3>Aucun rendez-vous</h3>
+                        <p>Aucun rendez-vous trouvé pour cette période.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            rdvList.innerHTML = rdvs.map(rdv => `
+                <div class="rdv-card" data-id="${rdv.id}">
+                    <div class="rdv-time">${rdv.time || 'Non défini'}</div>
+                    <div class="rdv-client">${rdv.clientName || 'Client non défini'}</div>
+                    ${rdv.clientPhone ? `<div class="rdv-phone">📞 ${rdv.clientPhone}</div>` : ''}
+                    <div>
+                        <span class="rdv-service">${rdv.service || 'Service non défini'}</span>
+                        ${rdv.price ? `<span class="rdv-price">${rdv.price}€</span>` : ''}
+                    </div>
+                    ${rdv.notes ? `<div class="rdv-notes">"${rdv.notes}"</div>` : ''}
+                    <div style="margin-top: 10px;">
+                        <span class="status-badge status-${rdv.status || 'prevu'}">${getStatusText(rdv.status)}</span>
+                        <span class="payment-badge payment-${rdv.paymentStatus || 'unpaid'}">${getPaymentText(rdv.paymentStatus)}</span>
+                    </div>
+                    
+                    <div class="rdv-actions">
+                        <button class="action-btn" onclick="editRdv('${rdv.id}')">Modifier</button>
+                        <button class="action-btn" onclick="updateRdvStatus('${rdv.id}', 'termine')">Terminer</button>
+                        <button class="action-btn" onclick="updateRdvPayment('${rdv.id}', 'paid')">Payé</button>
+                        <button class="action-btn action-delete" onclick="deleteRdv('${rdv.id}')">Supprimer</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getStatusText(status) {
+            const statuses = {
+                'prevu': 'Prévu',
+                'arrive': 'Arrivé',
+                'encours': 'En cours',
+                'termine': 'Terminé',
+                'annule': 'Annulé'
+            };
+            return statuses[status] || 'Prévu';
+        }
+
+        function getPaymentText(payment) {
+            const payments = {
+                'unpaid': 'Non payé',
+                'paid': 'Payé',
+                'comped': 'Gratuit'
+            };
+            return payments[payment] || 'Non payé';
+        }
+
+        // === MODAL RDV ===
+        window.openAddRdvModal = function() {
+            currentEditingId = null;
+            document.getElementById('modalTitle').textContent = 'Nouveau Rendez-vous';
+            document.getElementById('saveBtnText').textContent = 'Ajouter';
+            document.getElementById('rdvForm').reset();
+            
+            // Définir la date actuelle par défaut
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('rdvDate').value = today;
+            
+            document.getElementById('rdvModal').classList.add('show');
+        };
+
+        window.editRdv = function(rdvId) {
+            const rdv = allRdvs.find(r => r.id === rdvId);
+            if (!rdv) return;
+
+            currentEditingId = rdvId;
+            document.getElementById('modalTitle').textContent = 'Modifier Rendez-vous';
+            document.getElementById('saveBtnText').textContent = 'Modifier';
+            
+            // Remplir le formulaire
+            document.getElementById('rdvDate').value = rdv.date || '';
+            document.getElementById('rdvTime').value = rdv.time || '';
+            document.getElementById('clientName').value = rdv.clientName || '';
+            document.getElementById('clientPhone').value = rdv.clientPhone || '';
+            document.getElementById('service').value = rdv.service || '';
+            document.getElementById('price').value = rdv.price || '';
+            document.getElementById('status').value = rdv.status || 'prevu';
+            document.getElementById('paymentStatus').value = rdv.paymentStatus || 'unpaid';
+            document.getElementById('notes').value = rdv.notes || '';
+            
+            document.getElementById('rdvModal').classList.add('show');
+        };
+
+        window.closeRdvModal = function() {
+            document.getElementById('rdvModal').classList.remove('show');
+            currentEditingId = null;
+        };
+
+        window.saveRdv = async function(event) {
+            event.preventDefault();
+            
+            const formData = new FormData(event.target);
+            const rdvData = {
+                date: formData.get('date'),
+                time: formData.get('time'),
+                clientName: formData.get('clientName'),
+                clientPhone: formData.get('clientPhone'),
+                service: formData.get('service'),
+                price: parseFloat(formData.get('price')) || 0,
+                status: formData.get('status'),
+                paymentStatus: formData.get('paymentStatus'),
+                notes: formData.get('notes')
+            };
+
+            const saveBtn = document.querySelector('.btn-save');
+            saveBtn.disabled = true;
+            document.getElementById('saveBtnText').textContent = 'Enregistrement...';
+
+            try {
+                let result;
+                if (currentEditingId) {
+                    result = await rdvManager.updateRendezVous(currentEditingId, rdvData);
+                } else {
+                    result = await rdvManager.addRendezVous(rdvData);
+                }
+
+                if (result.success) {
+                    closeRdvModal();
+                    await loadAllRdv();
+                } else {
+                    alert('Erreur lors de l\'enregistrement: ' + result.error);
+                }
+            } catch (error) {
+                alert('Erreur: ' + error.message);
+            } finally {
+                saveBtn.disabled = false;
+                document.getElementById('saveBtnText').textContent = currentEditingId ? 'Modifier' : 'Ajouter';
+            }
+        };
+
+        window.deleteRdv = async function(rdvId) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer ce rendez-vous ?')) return;
+
+            try {
+                const result = await rdvManager.deleteRendezVous(rdvId);
+                if (result.success) {
+                    await loadAllRdv();
+                } else {
+                    alert('Erreur lors de la suppression: ' + result.error);
+                }
+            } catch (error) {
+                alert('Erreur: ' + error.message);
+            }
+        };
+
+        window.updateRdvStatus = async function(rdvId, newStatus) {
+            try {
+                const result = await rdvManager.updateStatus(rdvId, newStatus);
+                if (result.success) {
+                    await loadAllRdv();
+                }
+            } catch (error) {
+                console.error('Erreur mise à jour statut:', error);
+            }
+        };
+
+        window.updateRdvPayment = async function(rdvId, paymentStatus) {
+            try {
+                const result = await rdvManager.updatePaymentStatus(rdvId, paymentStatus);
+                if (result.success) {
+                    await loadAllRdv();
+                }
+            } catch (error) {
+                console.error('Erreur mise à jour paiement:', error);
+            }
+        };
+
+        // === RECHERCHE ET FILTRES ===
+        window.searchRdv = async function(searchTerm) {
+            if (!searchTerm.trim()) {
+                displayRdvs(allRdvs);
+                return;
+            }
+
+            try {
+                const result = await rdvManager.searchRendezVous(searchTerm);
+                if (result.success) {
+                    displayRdvs(result.data);
+                }
+            } catch (error) {
+                console.error('Erreur recherche:', error);
+            }
+        };
+
+        window.filterRdv = function() {
+            const statusFilter = document.getElementById('statusFilter').value;
+            const paymentFilter = document.getElementById('paymentFilter').value;
+            
+            let filteredRdvs = allRdvs;
+            
+            if (statusFilter) {
+                filteredRdvs = filteredRdvs.filter(rdv => rdv.status === statusFilter);
+            }
+            
+            if (paymentFilter) {
+                filteredRdvs = filteredRdvs.filter(rdv => rdv.paymentStatus === paymentFilter);
+            }
+            
+            displayRdvs(filteredRdvs);
+        };
+
+        // === NAVIGATION DATES ===
+        window.previousDay = function() {
+            const datePicker = document.getElementById('datePicker');
+            const currentDate = new Date(datePicker.value);
+            currentDate.setDate(currentDate.getDate() - 1);
+            datePicker.value = currentDate.toISOString().split('T')[0];
+            loadRdvByDate();
+        };
+
+        window.nextDay = function() {
+            const datePicker = document.getElementById('datePicker');
+            const currentDate = new Date(datePicker.value);
+            currentDate.setDate(currentDate.getDate() + 1);
+            datePicker.value = currentDate.toISOString().split('T')[0];
+            loadRdvByDate();
+        };
+
+        window.goToToday = function() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('datePicker').value = today;
+            loadRdvByDate();
+        };
+
+        // === NAVIGATION PAGES ===
+        window.showPage = function(pageId) {
+            // Cacher toutes les pages
+            document.querySelectorAll('.page-content').forEach(page => {
+                page.classList.remove('active');
+            });
+            
+            // Retirer l'état actif de tous les nav-items
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Afficher la page sélectionnée
+            document.getElementById(pageId + '-page').classList.add('active');
+            
+            // Activer le nav-item correspondant
+            event.target.closest('.nav-item').classList.add('active');
+        };
+
+        // Exposer les fonctions globalement
+        window.simpleAuth = simpleAuth;
+        window.rdvManager = rdvManager;
+    </script>
+
+    <style>
+        /* Style pour message d'erreur */
+        .error-message.show {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            border-radius: 12px;
+        }
+        
+        /* Loading spinner amélioré */
+        .loading {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .loading.show {
+            opacity: 1;
+        }
+        
+        /* Amélioration des boutons */
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        /* Style pour les badges de statut */
+        .status-badge, .payment-badge {
+            color: white;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+    </style>
+</body>
+</html>
